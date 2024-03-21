@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   nav_core
   std_msgs
   roscpp
+  tf2_ros
 )
 
 generate_dynamic_reconfigure_options(cfg/StrafRecovery.cfg)
