@@ -51,7 +51,7 @@ namespace straf_recovery {
     tf2_ros::Buffer* tfbuffer_;
 
     /** @brief straf in the direction of a point, given in the odom frame */
-    void strafInDiretionOfPose(tf::Stamped<tf::Pose> current_pose, tf::Vector3 direction_pose, bool away = true);
+    void strafInDiretionOfPose(geometry_msgs::PoseStamped current_pose, tf2::Vector3 direction_pose, bool away = true);
 
     /** @brief uses move_base_simple/goal */
     void goalCallback(const geometry_msgs::PoseStamped& msg);
