@@ -1,13 +1,7 @@
 #include "straf_recovery/straf_recovery.h"
 #include "obstacle_finder/obstacle_finder.h"
-
-#include <angles/angles.h>
-#include <cmath>
-#include <math.h>
 #include <pluginlib/class_list_macros.h>
 #include <std_msgs/Int32.h>
-#include <tf/transform_datatypes.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <geometry_msgs/Twist.h>
 namespace straf_recovery {
   StrafRecovery::StrafRecovery() : initialized_(false), cycles_(0) {}

@@ -6,7 +6,6 @@ project(straf_recovery)
 ## is used, also find other catkin packages
 find_package(PCL REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
-  angles
   base_local_planner
   dynamic_reconfigure
   geometry_msgs
@@ -26,7 +25,6 @@ catkin_package(
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
   CATKIN_DEPENDS
-    angles
     base_local_planner
     dynamic_reconfigure
     geometry_msgs
