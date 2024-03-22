@@ -4,7 +4,6 @@ project(straf_recovery)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(PCL REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
   base_local_planner
   dynamic_reconfigure
@@ -31,7 +30,6 @@ catkin_package(
     nav_core
     std_msgs
     roscpp
-  DEPENDS pcl
 )
 
 ###########

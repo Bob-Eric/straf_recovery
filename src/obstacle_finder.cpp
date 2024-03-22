@@ -32,15 +32,15 @@ namespace obstacle_finder {
     for (cell_x_idx = 0; cell_x_idx < costmap->getSizeInCellsX(); cell_x_idx++) {
       for (cell_y_idx = 0; cell_y_idx < costmap->getSizeInCellsY(); cell_y_idx++) {
         double cost_idx = costmap->getCost(cell_x_idx, cell_y_idx);
-        int dx = cell_x_idx - robot_map_x;
-        int dy = cell_y_idx - robot_map_y;
-
-        double dist_idx = pow(dx, 2) + pow(dy, 2);
 
         // if we found an obstacle, check and set if it's the new closest
         if (cost_idx >= costmap_2d::LETHAL_OBSTACLE) {
-          if (dist_idx < minimum_distance_squared) {
-            minimum_distance_squared = dist_idx;
+          int dx = cell_x_idx - robot_map_x;
+          int dy = cell_y_idx - robot_map_y;
+
+          double dist_idx_squared = dx * dx + dy * dy;
+          if (dist_idx_squared < minimum_distance_squared) {
+            minimum_distance_squared = dist_idx_squared;
             min_x = cell_x_idx;
             min_y = cell_y_idx;
           }

@@ -87,10 +87,12 @@ namespace straf_recovery {
     local_costmap_->getRobotPose(initial_local_pose_msg);
 
     double current_distance_translated = 0.0;
+
     tf2::Vector3 initial_local_pose(
       initial_local_pose_msg.pose.position.x,
       initial_local_pose_msg.pose.position.y,
       initial_local_pose_msg.pose.position.z);
+
     // find the nearest obstacle
     double robot_odom_x = initial_local_pose.getX();
     double robot_odom_y = initial_local_pose.getY();
@@ -99,6 +101,7 @@ namespace straf_recovery {
 
     ros::Time end = ros::Time::now() + ros::Duration(timeout_);
     while (n.ok() && ros::Time::now() < end) {
+      // ros::WallTime start_total = ros::WallTime::now();
 
       geometry_msgs::PoseStamped local_pose_msg;
       local_costmap_->getRobotPose(local_pose_msg);
@@ -108,8 +111,8 @@ namespace straf_recovery {
         local_pose_msg.pose.position.y,
         local_pose_msg.pose.position.z);
 
-      double robot_odom_x = local_pose.getX();
-      double robot_odom_y = local_pose.getY();
+      robot_odom_x = local_pose.getX();
+      robot_odom_y = local_pose.getY();
 
       current_distance_translated = (local_pose - initial_local_pose).length();
 
@@ -122,18 +125,16 @@ namespace straf_recovery {
       double distance_to_goal = (last_goal_pose - local_pose).length();
 
       ROS_INFO("distance_to_goal: %f", distance_to_goal);
+      // #######################   Unimplemented   #######################
       if (distance_to_goal < go_to_goal_distance_threshold_) {
         ROS_INFO("close enough to goal. strafing there instead");
         tf2::Vector3 goal_pose(last_goal_.pose.position.x, last_goal_.pose.position.y, last_goal_.pose.position.z);
-
-
-
         strafInDiretionOfPose(local_pose_msg, goal_pose, false); //straf towards not away
-
         if (distance_to_goal < xy_goal_tolerance_) {
           return;
         }
       }
+      // #######################   Unimplemented   #######################
       else {
 
         // The obstacle finder has a pointer to the local costmap, so that will keep working.
@@ -151,9 +152,15 @@ namespace straf_recovery {
           return;
         }
 
+        // ros::WallTime start_straf = ros::WallTime::now();
         tf2::Vector3 obstacle_pose(nearest_obstacle.x, nearest_obstacle.y, local_pose.getZ());
         strafInDiretionOfPose(local_pose_msg, obstacle_pose);
+        // ros::WallTime end_straf = ros::WallTime::now();
+        // ROS_INFO("Strafing took %f ms", (end_straf - start_straf).toSec() * 1000);
       }
+
+      // ros::WallTime end_total = ros::WallTime::now();
+      // ROS_INFO("Total Recovery took %f ms", (end_total - start_total).toSec() * 1000);
       r.sleep();
     }
 
@@ -163,10 +170,10 @@ namespace straf_recovery {
     cycles_pub_.publish(msg);
   }
 
-  void StrafRecovery::strafInDiretionOfPose(geometry_msgs::PoseStamped current_pose, tf2::Vector3 direction_pose, bool away) {
+  void StrafRecovery::strafInDiretionOfPose(geometry_msgs::PoseStamped current_pose, tf2::Vector3 obstacle_pose, bool away) {
     tf2::Vector3 current_pose_vector(current_pose.pose.position.x, current_pose.pose.position.y, current_pose.pose.position.z);
 
-    tf2::Vector3 diff = current_pose_vector - direction_pose;
+    tf2::Vector3 diff = current_pose_vector - obstacle_pose;
     double yaw_in_odom_frame = atan2(diff.y(), diff.x());
 
     tf::Quaternion straf_direction = tf::createQuaternionFromYaw(yaw_in_odom_frame);
@@ -174,9 +181,9 @@ namespace straf_recovery {
     geometry_msgs::PoseStamped obstacle_msg;
 
     obstacle_msg.header.frame_id = current_pose.header.frame_id;
-    obstacle_msg.header.stamp = ros::Time::now();
-    obstacle_msg.pose.position.x = direction_pose.getX();
-    obstacle_msg.pose.position.y = direction_pose.getY();
+    obstacle_msg.header.stamp = ros::Time(0);
+    obstacle_msg.pose.position.x = obstacle_pose.getX();
+    obstacle_msg.pose.position.y = obstacle_pose.getY();
     obstacle_msg.pose.orientation.x = straf_direction.x();
     obstacle_msg.pose.orientation.y = straf_direction.y();
     obstacle_msg.pose.orientation.z = straf_direction.z();
@@ -186,26 +193,21 @@ namespace straf_recovery {
 
     geometry_msgs::PoseStamped straf_msg;
 
-    tfbuffer_->transform(obstacle_msg, straf_msg, "base_link", ros::Duration(3.0));
-
-
-    // tf2_listener_->waitForTransform("/base_link", current_pose.frame_id_, ros::Time::now(), ros::Duration(3.0));
-    // tf2_listener_->transformPose("/base_link", obstacle_msg, straf_msg);
+    tfbuffer_->transform(obstacle_msg, straf_msg, "base_link");
 
     // angle in the base_link frame
     double straf_angle = tf::getYaw(straf_msg.pose.orientation);
 
-    geometry_msgs::Twist cmd_vel;
-
     if (!away) {
       straf_angle += M_PI;
     }
+
+    geometry_msgs::Twist cmd_vel;
     cmd_vel.linear.x = vel_ * cos(straf_angle);
     cmd_vel.linear.y = vel_ * sin(straf_angle);
     cmd_vel.linear.z = 0.0;
 
     vel_pub_.publish(cmd_vel);
-
   }
 
   void StrafRecovery::goalCallback(const geometry_msgs::PoseStamped& msg) {
