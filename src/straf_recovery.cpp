@@ -101,7 +101,6 @@ namespace straf_recovery {
 
     ros::Time end = ros::Time::now() + ros::Duration(timeout_);
     while (n.ok() && ros::Time::now() < end) {
-      // ros::WallTime start_total = ros::WallTime::now();
 
       geometry_msgs::PoseStamped local_pose_msg;
       local_costmap_->getRobotPose(local_pose_msg);
@@ -124,7 +123,7 @@ namespace straf_recovery {
 
       double distance_to_goal = (last_goal_pose - local_pose).length();
 
-      ROS_INFO("distance_to_goal: %f", distance_to_goal);
+      ROS_DEBUG("distance_to_goal: %f", distance_to_goal);
       // #######################   Unimplemented   #######################
       if (distance_to_goal < go_to_goal_distance_threshold_) {
         ROS_INFO("close enough to goal. strafing there instead");
@@ -149,18 +148,14 @@ namespace straf_recovery {
 
         // check if we've reade the minimum distance
         if (current_distance_translated > minimum_translate_distance_) {
+          ROS_WARN("Straf Recovery has met minimum translate distance, exiting");
           return;
         }
 
-        // ros::WallTime start_straf = ros::WallTime::now();
         tf2::Vector3 obstacle_pose(nearest_obstacle.x, nearest_obstacle.y, local_pose.getZ());
         strafInDiretionOfPose(local_pose_msg, obstacle_pose);
-        // ros::WallTime end_straf = ros::WallTime::now();
-        // ROS_INFO("Strafing took %f ms", (end_straf - start_straf).toSec() * 1000);
       }
 
-      // ros::WallTime end_total = ros::WallTime::now();
-      // ROS_INFO("Total Recovery took %f ms", (end_total - start_total).toSec() * 1000);
       r.sleep();
     }
 
