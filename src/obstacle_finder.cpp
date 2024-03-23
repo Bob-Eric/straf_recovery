@@ -24,6 +24,9 @@ namespace obstacle_finder {
     double minimum_distance_squared = DBL_MAX;
     unsigned int cell_x_idx, cell_y_idx;
 
+    // lock costmap so content doesn't change while adding cell costs
+    boost::unique_lock<costmap_2d::Costmap2D::mutex_t> lock(*(costmap_->getCostmap()->getMutex()));
+
     costmap_2d::Costmap2D* costmap = costmap_->getCostmap();
 
     unsigned int robot_map_x, robot_map_y;
