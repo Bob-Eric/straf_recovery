@@ -42,6 +42,7 @@ namespace straf_recovery {
     base_local_planner::CostmapModel* local_costmap_model_;
     dynamic_reconfigure::Server<StrafRecoveryConfig>* dsrv_;
     costmap_2d::Costmap2DROS* local_costmap_;
+    costmap_2d::Costmap2DROS* global_costmap_;
     costmap_2d::Costmap2D* costmap_;
     geometry_msgs::PoseStamped last_goal_;
     ros::Publisher cycles_pub_;

@@ -7,7 +7,7 @@ namespace straf_recovery {
   StrafRecovery::StrafRecovery() : initialized_(false), cycles_(0) {}
 
   void StrafRecovery::initialize(std::string name, tf2_ros::Buffer* tf2_buffer,
-    costmap_2d::Costmap2DROS*, costmap_2d::Costmap2DROS* local_costmap) {
+    costmap_2d::Costmap2DROS* global_costmap, costmap_2d::Costmap2DROS* local_costmap) {
     if (initialized_) {
       ROS_ERROR("thou shall not call initialize twice on this object. Doing "
         "nothing.");
@@ -19,7 +19,8 @@ namespace straf_recovery {
     name_ = name;
     tfbuffer_ = tf2_buffer;
     local_costmap_ = local_costmap;
-    costmap_ = local_costmap_->getCostmap();
+    global_costmap_ = global_costmap;
+    costmap_ = local_costmap->getCostmap();
     local_costmap_model_ = new base_local_planner::CostmapModel(*local_costmap_->getCostmap());
 
     // get some parameters from the parameter server
@@ -98,7 +99,7 @@ namespace straf_recovery {
     obstacle_finder::ObstacleFinder finder(local_costmap_);
 
     ros::Time end = ros::Time::now() + ros::Duration(timeout_);
-    double local_pose_cost;
+    unsigned int local_pose_cost;
 
     while (n.ok() && ros::Time::now() < end) {
 
@@ -128,6 +129,7 @@ namespace straf_recovery {
       unsigned int robot_map_x, robot_map_y;
       costmap_->worldToMap(robot_odom_x, robot_odom_y, robot_map_x, robot_map_y);
       local_pose_cost = costmap_->getCost(robot_map_x, robot_map_y);
+      // ROS_INFO("local_pose_cost: %d", local_pose_cost);
 
       // #######################   Unimplemented   #######################
       if (distance_to_goal < go_to_goal_distance_threshold_) {
@@ -154,10 +156,20 @@ namespace straf_recovery {
 
 
 
-        // check if robot pose is outside the inflation radius
-        if (local_pose_cost < costmap_2d::INSCRIBED_INFLATED_OBSTACLE) {
-          ROS_WARN("Robot is outside the inflation radius, exiting");
-          return;
+
+        if (current_distance_translated > minimum_translate_distance_) {
+          // check if robot pose is in free space
+          if (local_pose_cost == costmap_2d::FREE_SPACE) {
+            ROS_WARN("Straf Recovery has met minimum translate distance %.2f and robot is in free space, exiting",
+              minimum_translate_distance_);
+            return;
+          }
+          else {
+            const double increase_distance_threshold = 0.1;
+            ROS_WARN("Straf Recovery has met minimum translate distance %.2f but robot is not in free space, increasing minimum distance to %.2f",
+              minimum_translate_distance_, minimum_translate_distance_ + increase_distance_threshold);
+            minimum_translate_distance_ += increase_distance_threshold;
+          }
         }
 
         // if robot is inside the obstacle, go to the nearest obstacle;
