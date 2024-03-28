@@ -23,9 +23,10 @@ namespace obstacle_finder {
      * \param robot_odom_x needs to be in the odom frame, in units of cells
      * \param robot_odom_y y needs to be in the odom frame, in units of cells
      */
-    Obstacle nearestObstacle(costmap_2d::Costmap2DROS* new_costmap, double robot_odom_x, double robot_odom_y);
+    Obstacle nearestObstacle(costmap_2d::Costmap2DROS* new_costmap, double robot_odom_x, double robot_odom_y,
+      bool find_boundary);
 
-    Obstacle nearestObstacle(double robot_odom_x, double robot_odom_y);
+    Obstacle nearestObstacle(double robot_odom_x, double robot_odom_y, bool find_boundary);
 
     Obstacle nearestObstacle();
 

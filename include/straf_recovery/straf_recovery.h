@@ -31,6 +31,7 @@ namespace straf_recovery {
   private:
     bool initialized_;
     bool enabled_;
+    double find_obstacle_time_old_;
     double frequency_;
     double maximum_translate_distance_;
     double minimum_translate_distance_;

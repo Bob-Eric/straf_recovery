@@ -15,7 +15,7 @@ namespace straf_recovery {
     }
 
     initialized_ = true;
-
+    find_obstacle_time_old_ = 0;
     name_ = name;
     tfbuffer_ = tf2_buffer;
     local_costmap_ = local_costmap;
@@ -100,6 +100,8 @@ namespace straf_recovery {
 
     ros::Time end = ros::Time::now() + ros::Duration(timeout_);
     unsigned int local_pose_cost;
+    obstacle_finder::Obstacle nearest_obstacle;
+    double desired_translate_distance = minimum_translate_distance_;
 
     while (n.ok() && ros::Time::now() < end) {
 
@@ -143,10 +145,6 @@ namespace straf_recovery {
       // #######################   Unimplemented   #######################
       else {
 
-        // The obstacle finder has a pointer to the local costmap, so that will keep working.
-        // We just need to use the opdated x and y
-        obstacle_finder::Obstacle nearest_obstacle = finder.nearestObstacle(robot_odom_x, robot_odom_y);
-
         // check if we've reached max distance
         if (current_distance_translated > maximum_translate_distance_) {
           ROS_WARN("Straf Recovery has met maximum translate distance");
@@ -154,30 +152,42 @@ namespace straf_recovery {
         }
 
 
-        if (current_distance_translated > minimum_translate_distance_) {
+        if (current_distance_translated > desired_translate_distance) {
           // check if robot pose is in free space
           if (local_pose_cost == costmap_2d::FREE_SPACE) {
-            ROS_WARN("Straf Recovery has met minimum translate distance %.2f and robot is in free space, exiting",
-              minimum_translate_distance_);
+            ROS_WARN("Straf Recovery has met desired translate distance %.2f and robot is in free space, exiting",
+              desired_translate_distance);
             return;
           }
           else {
             const double increase_distance_threshold = 0.1;
-            ROS_WARN("Straf Recovery has met minimum translate distance %.2f but robot is not in free space, increasing minimum distance to %.2f",
-              minimum_translate_distance_, minimum_translate_distance_ + increase_distance_threshold);
-            minimum_translate_distance_ += increase_distance_threshold;
+            ROS_WARN("Straf Recovery has met desired translate distance %.2f but robot is not in free space, increasing desired distance to %.2f",
+              desired_translate_distance, desired_translate_distance + increase_distance_threshold);
+            desired_translate_distance += increase_distance_threshold;
           }
         }
-        bool away_from_obstacle = true;
-        // // -------------------- UNIMPLEMENTED --------------------
-        // // if robot is inside the obstacle, go to the nearest obstacle;
-        // // otherwise, go away from the nearest obstacle
-        // away_from_obstacle = local_pose_cost > costmap_2d::LETHAL_OBSTACLE ? false : true;
-        // if (away_from_obstacle) {
-        //   ROS_ERROR("Robot is inside the obstacle, going to the nearest obstacle");
-        // }
-        // // -------------------- UNIMPLEMENTED --------------------
+        // if robot is inside the obstacle, go to the nearest obstacle;
+        // otherwise, go away from the nearest obstacle
+        bool inside_obstacle = local_pose_cost > costmap_2d::LETHAL_OBSTACLE;
+        if (inside_obstacle) {
+          ROS_ERROR("Robot is inside the obstacle, going to the nearest obstacle");
+        }
+        else {
+          ROS_INFO("Robot is outside the obstacle, going away from the nearest obstacle");
+        }
+
+        // The obstacle finder has a pointer to the local costmap, so that will keep working.
+        // We just need to use the opdated x and y
+        const double find_obstacle_time_threshold = 2.0;
+        const bool find_boundary = inside_obstacle;
+        if (ros::Time::now().toSec() - find_obstacle_time_old_ > find_obstacle_time_threshold) {
+          find_obstacle_time_old_ = ros::Time::now().toSec();
+          nearest_obstacle = finder.nearestObstacle(robot_odom_x, robot_odom_y, find_boundary);
+        }
+        // nearest_obstacle = finder.nearestObstacle(robot_odom_x, robot_odom_y, find_boundary);
+
         tf2::Vector3 obstacle_pose(nearest_obstacle.x, nearest_obstacle.y, local_pose.getZ());
+        const bool away_from_obstacle = !inside_obstacle;
         strafInDiretionOfPose(local_pose_msg, obstacle_pose, away_from_obstacle);
       }
 

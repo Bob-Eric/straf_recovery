@@ -8,7 +8,7 @@ namespace obstacle_finder {
     : costmap_(costmap), robot_odom_x_(robot_odom_x), robot_odom_y_(robot_odom_y) {}
 
   Obstacle ObstacleFinder::nearestObstacle() {
-    return nearestObstacle(costmap_, robot_odom_x_, robot_odom_y_);
+    return nearestObstacle(costmap_, robot_odom_x_, robot_odom_y_, false);
   }
 
 
@@ -37,14 +37,14 @@ namespace obstacle_finder {
     return false;
   }
 
-  Obstacle ObstacleFinder::nearestObstacle(double robot_odom_x, double robot_odom_y) {
+  Obstacle ObstacleFinder::nearestObstacle(double robot_odom_x, double robot_odom_y, bool find_boundary) {
     robot_odom_x_ = robot_odom_x;
     robot_odom_y_ = robot_odom_y;
-    return nearestObstacle(costmap_, robot_odom_x, robot_odom_y);
+    return nearestObstacle(costmap_, robot_odom_x, robot_odom_y, find_boundary);
   }
 
   Obstacle ObstacleFinder::nearestObstacle(costmap_2d::Costmap2DROS* new_costmap, double robot_odom_x,
-    double robot_odom_y) {
+    double robot_odom_y, bool find_boundary) {
     costmap_ = new_costmap;
     robot_odom_x_ = robot_odom_x;
     robot_odom_y_ = robot_odom_y;
@@ -61,12 +61,22 @@ namespace obstacle_finder {
     unsigned int robot_map_x, robot_map_y;
     costmap->worldToMap(robot_odom_x, robot_odom_y, robot_map_x, robot_map_y);
 
+
+    auto cost_condition = [this](bool find_boundary, float cost) {
+      if (find_boundary) {
+        return cost < costmap_2d::INSCRIBED_INFLATED_OBSTACLE;
+      }
+      else {
+        return cost >= costmap_2d::LETHAL_OBSTACLE;
+      }
+      };
+
     for (cell_y_idx = 0; cell_y_idx < costmap->getSizeInCellsY(); cell_y_idx++) {
       for (cell_x_idx = 0; cell_x_idx < costmap->getSizeInCellsX(); cell_x_idx++) {
         double cost_idx = costmap->getCost(cell_x_idx, cell_y_idx);
 
         // if we found an obstacle, check and set if it's the new closest
-        if (cost_idx >= costmap_2d::LETHAL_OBSTACLE) {
+        if (cost_condition(find_boundary, cost_idx)) {
           // if (cost_idx >= costmap_2d::LETHAL_OBSTACLE && isBoundary(cell_x_idx, cell_y_idx)) {
           int dx = cell_x_idx - robot_map_x;
           int dy = cell_y_idx - robot_map_y;
