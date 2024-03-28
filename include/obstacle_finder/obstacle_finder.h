@@ -17,6 +17,7 @@ public:
 class ObstacleFinder
 {
 public:
+  ObstacleFinder(costmap_2d::Costmap2DROS* costmap);
   ObstacleFinder(costmap_2d::Costmap2DROS* costmap, double robot_odom_x, double robot_odom_y);
 
   /** \return calculates the distance to and location of the nearest cell with LETHAL cost.

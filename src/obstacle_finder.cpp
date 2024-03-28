@@ -1,6 +1,9 @@
 #include "obstacle_finder/obstacle_finder.h"
 
 namespace obstacle_finder {
+  ObstacleFinder::ObstacleFinder(costmap_2d::Costmap2DROS* costmap)
+    : costmap_(costmap), robot_odom_x_(0), robot_odom_y_(0) { }
+
   ObstacleFinder::ObstacleFinder(costmap_2d::Costmap2DROS* costmap, double robot_odom_x, double robot_odom_y)
     : costmap_(costmap), robot_odom_x_(robot_odom_x), robot_odom_y_(robot_odom_y) {}
 

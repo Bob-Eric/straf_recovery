@@ -19,6 +19,7 @@ namespace straf_recovery {
     name_ = name;
     tfbuffer_ = tf2_buffer;
     local_costmap_ = local_costmap;
+    costmap_ = local_costmap_->getCostmap();
     local_costmap_model_ = new base_local_planner::CostmapModel(*local_costmap_->getCostmap());
 
     // get some parameters from the parameter server
@@ -93,13 +94,12 @@ namespace straf_recovery {
       initial_local_pose_msg.pose.position.y,
       initial_local_pose_msg.pose.position.z);
 
-    // find the nearest obstacle
-    double robot_odom_x = initial_local_pose.getX();
-    double robot_odom_y = initial_local_pose.getY();
 
-    obstacle_finder::ObstacleFinder finder(local_costmap_, robot_odom_x, robot_odom_y);
+    obstacle_finder::ObstacleFinder finder(local_costmap_);
 
     ros::Time end = ros::Time::now() + ros::Duration(timeout_);
+    double local_pose_cost;
+
     while (n.ok() && ros::Time::now() < end) {
 
       geometry_msgs::PoseStamped local_pose_msg;
@@ -110,8 +110,8 @@ namespace straf_recovery {
         local_pose_msg.pose.position.y,
         local_pose_msg.pose.position.z);
 
-      robot_odom_x = local_pose.getX();
-      robot_odom_y = local_pose.getY();
+      double robot_odom_x = local_pose.getX();
+      double robot_odom_y = local_pose.getY();
 
       current_distance_translated = (local_pose - initial_local_pose).length();
 
@@ -124,6 +124,11 @@ namespace straf_recovery {
       double distance_to_goal = (last_goal_pose - local_pose).length();
 
       ROS_DEBUG("distance_to_goal: %f", distance_to_goal);
+
+      unsigned int robot_map_x, robot_map_y;
+      costmap_->worldToMap(robot_odom_x, robot_odom_y, robot_map_x, robot_map_y);
+      local_pose_cost = costmap_->getCost(robot_map_x, robot_map_y);
+
       // #######################   Unimplemented   #######################
       if (distance_to_goal < go_to_goal_distance_threshold_) {
         ROS_INFO("close enough to goal. strafing there instead");
@@ -146,14 +151,20 @@ namespace straf_recovery {
           return;
         }
 
-        // check if we've reade the minimum distance
-        if (current_distance_translated > minimum_translate_distance_) {
-          ROS_WARN("Straf Recovery has met minimum translate distance, exiting");
+
+
+
+        // check if robot pose is outside the inflation radius
+        if (local_pose_cost < costmap_2d::INSCRIBED_INFLATED_OBSTACLE) {
+          ROS_WARN("Robot is outside the inflation radius, exiting");
           return;
         }
 
+        // if robot is inside the obstacle, go to the nearest obstacle;
+        // otherwise, go away from the nearest obstacle
+        bool away_from_obstacle = local_pose_cost > costmap_2d::LETHAL_OBSTACLE ? false : true;
         tf2::Vector3 obstacle_pose(nearest_obstacle.x, nearest_obstacle.y, local_pose.getZ());
-        strafInDiretionOfPose(local_pose_msg, obstacle_pose);
+        strafInDiretionOfPose(local_pose_msg, obstacle_pose, away_from_obstacle);
       }
 
       r.sleep();
