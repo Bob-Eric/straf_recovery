@@ -154,9 +154,6 @@ namespace straf_recovery {
         }
 
 
-
-
-
         if (current_distance_translated > minimum_translate_distance_) {
           // check if robot pose is in free space
           if (local_pose_cost == costmap_2d::FREE_SPACE) {
@@ -171,10 +168,15 @@ namespace straf_recovery {
             minimum_translate_distance_ += increase_distance_threshold;
           }
         }
-
-        // if robot is inside the obstacle, go to the nearest obstacle;
-        // otherwise, go away from the nearest obstacle
-        bool away_from_obstacle = local_pose_cost > costmap_2d::LETHAL_OBSTACLE ? false : true;
+        bool away_from_obstacle = true;
+        // // -------------------- UNIMPLEMENTED --------------------
+        // // if robot is inside the obstacle, go to the nearest obstacle;
+        // // otherwise, go away from the nearest obstacle
+        // away_from_obstacle = local_pose_cost > costmap_2d::LETHAL_OBSTACLE ? false : true;
+        // if (away_from_obstacle) {
+        //   ROS_ERROR("Robot is inside the obstacle, going to the nearest obstacle");
+        // }
+        // // -------------------- UNIMPLEMENTED --------------------
         tf2::Vector3 obstacle_pose(nearest_obstacle.x, nearest_obstacle.y, local_pose.getZ());
         strafInDiretionOfPose(local_pose_msg, obstacle_pose, away_from_obstacle);
       }
@@ -191,7 +193,7 @@ namespace straf_recovery {
   void StrafRecovery::strafInDiretionOfPose(geometry_msgs::PoseStamped current_pose, tf2::Vector3 obstacle_pose, bool away) {
     tf2::Vector3 current_pose_vector(current_pose.pose.position.x, current_pose.pose.position.y, current_pose.pose.position.z);
 
-    tf2::Vector3 diff = current_pose_vector - obstacle_pose;
+    tf2::Vector3 diff = (current_pose_vector - obstacle_pose) * (away ? 1 : -1);
     double yaw_in_odom_frame = atan2(diff.y(), diff.x());
 
     tf::Quaternion straf_direction = tf::createQuaternionFromYaw(yaw_in_odom_frame);
@@ -216,9 +218,7 @@ namespace straf_recovery {
     // angle in the base_link frame
     double straf_angle = tf::getYaw(straf_msg.pose.orientation);
 
-    if (!away) {
-      straf_angle += M_PI;
-    }
+
 
     geometry_msgs::Twist cmd_vel;
     cmd_vel.linear.x = vel_ * cos(straf_angle);
