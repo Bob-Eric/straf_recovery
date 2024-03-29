@@ -1,6 +1,6 @@
 #include <costmap_2d/costmap_2d_ros.h>
 #include <ros/ros.h>
-
+#include <geometry_msgs/PoseArray.h>
 namespace obstacle_finder {
   class Obstacle {
   public:
@@ -29,11 +29,12 @@ namespace obstacle_finder {
     Obstacle nearestObstacle(double robot_odom_x, double robot_odom_y, bool find_boundary);
 
     Obstacle nearestObstacle();
-
+    geometry_msgs::PoseArray getAllVisitedGrids();
   private:
     costmap_2d::Costmap2DROS* costmap_;
     double robot_odom_x_;
     double robot_odom_y_;
     bool isBoundary(int center_x, int center_y);
+    geometry_msgs::PoseArray visited_grids;
   };
 }

@@ -3,6 +3,7 @@
 #include <pluginlib/class_list_macros.h>
 #include <std_msgs/Int32.h>
 #include <geometry_msgs/Twist.h>
+#include <geometry_msgs/PoseArray.h>
 namespace straf_recovery {
   StrafRecovery::StrafRecovery() : initialized_(false), cycles_(0) {}
 
@@ -50,6 +51,8 @@ namespace straf_recovery {
 
     // for failure detection
     cycles_pub_ = private_nh.advertise<std_msgs::Int32>("cycles", 10);
+
+    visited_grids_pub_ = private_nh.advertise<geometry_msgs::PoseArray>("visited_grids", 10);
 
     ROS_INFO("minimum_translate_distance %f", minimum_translate_distance_);
     ROS_INFO("maximum_translate_distance %f", maximum_translate_distance_);
@@ -168,23 +171,24 @@ namespace straf_recovery {
         }
         // if robot is inside the obstacle, go to the nearest obstacle;
         // otherwise, go away from the nearest obstacle
-        bool inside_obstacle = local_pose_cost > costmap_2d::LETHAL_OBSTACLE;
+        bool inside_obstacle = local_pose_cost >= costmap_2d::LETHAL_OBSTACLE;
         if (inside_obstacle) {
-          ROS_ERROR("Robot is inside the obstacle, going to the nearest obstacle");
+          ROS_ERROR("Inside obstacle, going to the nearest obstacle");
         }
         else {
-          ROS_INFO("Robot is outside the obstacle, going away from the nearest obstacle");
+          ROS_INFO("Outside obstacle, going away from the nearest obstacle");
         }
 
         // The obstacle finder has a pointer to the local costmap, so that will keep working.
         // We just need to use the opdated x and y
-        const double find_obstacle_time_threshold = 2.0;
+        // const double find_obstacle_time_threshold = 0.0;
         const bool find_boundary = inside_obstacle;
-        if (ros::Time::now().toSec() - find_obstacle_time_old_ > find_obstacle_time_threshold) {
-          find_obstacle_time_old_ = ros::Time::now().toSec();
-          nearest_obstacle = finder.nearestObstacle(robot_odom_x, robot_odom_y, find_boundary);
-        }
-        // nearest_obstacle = finder.nearestObstacle(robot_odom_x, robot_odom_y, find_boundary);
+        // if (ros::Time::now().toSec() - find_obstacle_time_old_ > find_obstacle_time_threshold) {
+        // find_obstacle_time_old_ = ros::Time::now().toSec();
+        nearest_obstacle = finder.nearestObstacle(robot_odom_x, robot_odom_y, find_boundary);
+        auto visited_grids = finder.getAllVisitedGrids();
+        visited_grids_pub_.publish(visited_grids);
+        // }
 
         tf2::Vector3 obstacle_pose(nearest_obstacle.x, nearest_obstacle.y, local_pose.getZ());
         const bool away_from_obstacle = !inside_obstacle;

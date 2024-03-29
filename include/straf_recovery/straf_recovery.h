@@ -53,6 +53,8 @@ namespace straf_recovery {
     std::string name_;
     tf2_ros::Buffer* tfbuffer_;
 
+    ros::Publisher visited_grids_pub_;
+
     /** @brief straf in the direction of a point, given in the odom frame */
     void strafInDiretionOfPose(geometry_msgs::PoseStamped current_pose, tf2::Vector3 direction_pose, bool away = true);
 

@@ -1,5 +1,4 @@
 #include "obstacle_finder/obstacle_finder.h"
-
 namespace obstacle_finder {
   ObstacleFinder::ObstacleFinder(costmap_2d::Costmap2DROS* costmap)
     : costmap_(costmap), robot_odom_x_(0), robot_odom_y_(0) {}
@@ -70,6 +69,8 @@ namespace obstacle_finder {
         return cost >= costmap_2d::LETHAL_OBSTACLE;
       }
       };
+    visited_grids.header.frame_id = costmap_->getGlobalFrameID();
+    visited_grids.poses.clear();
 
     for (cell_y_idx = 0; cell_y_idx < costmap->getSizeInCellsY(); cell_y_idx++) {
       for (cell_x_idx = 0; cell_x_idx < costmap->getSizeInCellsX(); cell_x_idx++) {
@@ -80,6 +81,12 @@ namespace obstacle_finder {
           // if (cost_idx >= costmap_2d::LETHAL_OBSTACLE && isBoundary(cell_x_idx, cell_y_idx)) {
           int dx = cell_x_idx - robot_map_x;
           int dy = cell_y_idx - robot_map_y;
+
+          geometry_msgs::Pose grid;
+          costmap->mapToWorld(cell_x_idx, cell_y_idx, grid.position.x, grid.position.y);
+
+          // 添加到向量
+          visited_grids.poses.push_back(grid);
 
           double dist_idx_squared = dx * dx + dy * dy;
           if (dist_idx_squared < minimum_distance_squared) {
@@ -95,6 +102,10 @@ namespace obstacle_finder {
     costmap->mapToWorld(min_x, min_y, co.x, co.y);
     co.dist = sqrt(minimum_distance_squared) * costmap->getResolution();
     return co;
+  }
+
+  geometry_msgs::PoseArray ObstacleFinder::getAllVisitedGrids() {
+    return visited_grids;
   }
 
   Obstacle::Obstacle(double x, double y, double dist) : x(x), y(y), dist(dist) {}
