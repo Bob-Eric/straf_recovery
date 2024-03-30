@@ -39,6 +39,8 @@ namespace straf_recovery {
     private_nh.param("go_to_goal_distance_threshold", go_to_goal_distance_threshold_, 0.0);
     private_nh.param("minimum_translate_distance", minimum_translate_distance_, 0.5);
     private_nh.param("maximum_translate_distance", maximum_translate_distance_, 5.0);
+    private_nh.param("increase_distance_threshold", increase_distance_threshold_, 0.05);
+    private_nh.param("obstacle_find_interval", obstacle_find_interval_, 0.5);
     private_nh.param("straf_vel", vel_, 0.1);
     private_nh.param("timeout", timeout_, 10);
 
@@ -163,10 +165,9 @@ namespace straf_recovery {
             return;
           }
           else {
-            const double increase_distance_threshold = 0.1;
             ROS_WARN("Straf Recovery has met desired translate distance %.2f but robot is not in free space, increasing desired distance to %.2f",
-              desired_translate_distance, desired_translate_distance + increase_distance_threshold);
-            desired_translate_distance += increase_distance_threshold;
+              desired_translate_distance, desired_translate_distance + increase_distance_threshold_);
+            desired_translate_distance += increase_distance_threshold_;
           }
         }
         // if robot is inside the obstacle, go to the nearest obstacle;
@@ -181,14 +182,13 @@ namespace straf_recovery {
 
         // The obstacle finder has a pointer to the local costmap, so that will keep working.
         // We just need to use the opdated x and y
-        // const double find_obstacle_time_threshold = 0.0;
         const bool find_boundary = inside_obstacle;
-        // if (ros::Time::now().toSec() - find_obstacle_time_old_ > find_obstacle_time_threshold) {
-        // find_obstacle_time_old_ = ros::Time::now().toSec();
-        nearest_obstacle = finder.nearestObstacle(robot_odom_x, robot_odom_y, find_boundary);
-        auto visited_grids = finder.getAllVisitedGrids();
-        visited_grids_pub_.publish(visited_grids);
-        // }
+        if (ros::Time::now().toSec() - find_obstacle_time_old_ > obstacle_find_interval_) {
+          find_obstacle_time_old_ = ros::Time::now().toSec();
+          nearest_obstacle = finder.nearestObstacle(robot_odom_x, robot_odom_y, find_boundary);
+          auto visited_grids = finder.getAllVisitedGrids();
+          visited_grids_pub_.publish(visited_grids);
+        }
 
         tf2::Vector3 obstacle_pose(nearest_obstacle.x, nearest_obstacle.y, local_pose.getZ());
         const bool away_from_obstacle = !inside_obstacle;
@@ -252,9 +252,11 @@ namespace straf_recovery {
     timeout_ = config.timeout;
     minimum_translate_distance_ = config.minimum_translate_distance;
     maximum_translate_distance_ = config.maximum_translate_distance;
+    increase_distance_threshold_ = config.increase_distance_threshold;
     xy_goal_tolerance_ = config.xy_goal_tolerance;
     go_to_goal_distance_threshold_ = config.go_to_goal_distance_threshold;
     vel_ = config.straf_vel;
+    obstacle_find_interval_ = config.obstacle_find_interval;
     frequency_ = config.frequency;
   }
   StrafRecovery::~StrafRecovery() {

@@ -35,9 +35,11 @@ namespace straf_recovery {
     double frequency_;
     double maximum_translate_distance_;
     double minimum_translate_distance_;
+    double increase_distance_threshold_;
     double go_to_goal_distance_threshold_;
     double xy_goal_tolerance_;
     double vel_;
+    double obstacle_find_interval_;
     int timeout_;  // in seconds
     int cycles_; // track how many times we've run for detecting failure?
     base_local_planner::CostmapModel* local_costmap_model_;
